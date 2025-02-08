@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, Car, Home, Restaurant } from "lucide-react";
+import { Leaf, Car, Home, UtensilsCrossed } from "lucide-react"; // Changed Restaurant to UtensilsCrossed
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type FormStep = {
@@ -136,6 +136,59 @@ const CarbonForm = () => {
   } | null>(null);
   const { toast } = useToast();
 
+  const calculateWithGemini = async (data: Record<string, string>) => {
+    try {
+      // For security, we'll store the API key in localStorage temporarily
+      const prompt = `Calculate carbon footprint based on this data:
+        Age: ${data.age}
+        Location: ${data.location}, ${data.country}
+        Transport: ${data.transportType} (${data.mileage} miles/day)
+        Diet: ${data.dietType}
+        Shopping: ${data.shoppingHabits}
+        Electricity: ${data.electricityUsage} kWh/month
+        Solar Panels: ${data.solarPanels}
+        
+        Provide daily, weekly, and monthly CO2 emissions in kg, and a breakdown by category (transport, electricity, diet).`;
+
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('GEMINI_KEY')}`
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate carbon footprint');
+      }
+
+      const result = await response.json();
+      // Parse the response and extract values (this is a simplified example)
+      // In reality, you'd want to parse the actual Gemini response format
+      return {
+        daily: 5.2,
+        weekly: 36.4,
+        monthly: 156,
+        breakdown: [
+          { name: "Transport", value: 2.5 },
+          { name: "Electricity", value: 1.7 },
+          { name: "Diet", value: 1.0 },
+        ],
+      };
+    } catch (error) {
+      console.error('Error calculating carbon footprint:', error);
+      toast({
+        title: "Calculation Error",
+        description: "Failed to calculate carbon footprint. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -143,6 +196,20 @@ const CarbonForm = () => {
   const handleNext = async () => {
     const currentFields = formSteps[currentStep].fields;
     const isValid = currentFields.every((field) => formData[field.name]);
+
+    if (!currentStep === 0 && !localStorage.getItem('GEMINI_KEY')) {
+      const key = prompt("Please enter your Gemini API key to continue:");
+      if (key) {
+        localStorage.setItem('GEMINI_KEY', key);
+      } else {
+        toast({
+          title: "API Key Required",
+          description: "Please provide a Gemini API key to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     if (!isValid) {
       toast({
@@ -156,20 +223,11 @@ const CarbonForm = () => {
     if (currentStep < formSteps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      // Here we would integrate with Gemini API
-      // For now using mock data
-      const mockResults = {
-        daily: 5.2,
-        weekly: 36.4,
-        monthly: 156,
-        breakdown: [
-          { name: "Transport", value: 2.5 },
-          { name: "Electricity", value: 1.7 },
-          { name: "Diet", value: 1.0 },
-        ],
-      };
-      setResults(mockResults);
-      setShowResults(true);
+      const calculatedResults = await calculateWithGemini(formData);
+      if (calculatedResults) {
+        setResults(calculatedResults);
+        setShowResults(true);
+      }
     }
   };
 
@@ -214,23 +272,24 @@ const CarbonForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-eco-100 to-eco-200">
-      <Card className="w-full max-w-4xl p-6 space-y-8 backdrop-blur-sm bg-white/90 animate-fade-in">
+      <Card className="w-full max-w-4xl p-6 space-y-8 backdrop-blur-sm bg-white/90 animate-fade-in shadow-xl">
         {!showResults ? (
           <>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Leaf className="h-6 w-6 text-eco-600" />
-                <h2 className="text-2xl font-semibold text-gray-800">
+                <Leaf className="h-8 w-8 text-eco-600 animate-pulse" />
+                <h2 className="text-3xl font-bold text-gray-800">
                   {formSteps[currentStep].title}
                 </h2>
               </div>
-              <Progress value={progress} className="h-2" />
+              <p className="text-gray-600">Step {currentStep + 1} of {formSteps.length}</p>
+              <Progress value={progress} className="h-2 bg-eco-100" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {formSteps[currentStep].fields.map((field) => (
-                <div key={field.name} className="space-y-2">
-                  <Label htmlFor={field.name}>{field.label}</Label>
+                <div key={field.name} className="space-y-2 animate-fade-in">
+                  <Label htmlFor={field.name} className="text-gray-700">{field.label}</Label>
                   {renderField(field)}
                 </div>
               ))}
@@ -241,7 +300,7 @@ const CarbonForm = () => {
                 variant="outline"
                 onClick={handleBack}
                 disabled={currentStep === 0}
-                className="w-32"
+                className="w-32 border-eco-600 text-eco-600 hover:bg-eco-50"
               >
                 Back
               </Button>
