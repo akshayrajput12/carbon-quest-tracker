@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, ChevronRight, ChevronLeft } from "lucide-react";
+import { Leaf, Car, Home, Restaurant } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type FormStep = {
   title: string;
@@ -15,6 +17,7 @@ type FormStep = {
     label: string;
     type: string;
     placeholder: string;
+    options?: { value: string; label: string }[];
   }[];
 };
 
@@ -23,16 +26,28 @@ const formSteps: FormStep[] = [
     title: "Personal Information",
     fields: [
       {
-        name: "name",
-        label: "Full Name",
-        type: "text",
-        placeholder: "Enter your full name",
+        name: "date",
+        label: "Date",
+        type: "date",
+        placeholder: "Select date",
       },
       {
-        name: "email",
-        label: "Email",
-        type: "email",
-        placeholder: "Enter your email",
+        name: "age",
+        label: "Age",
+        type: "number",
+        placeholder: "Enter your age",
+      },
+      {
+        name: "location",
+        label: "Location",
+        type: "text",
+        placeholder: "Enter your city",
+      },
+      {
+        name: "country",
+        label: "Country",
+        type: "text",
+        placeholder: "Enter your country",
       },
     ],
   },
@@ -40,16 +55,49 @@ const formSteps: FormStep[] = [
     title: "Transportation",
     fields: [
       {
-        name: "carMileage",
-        label: "Weekly Car Mileage",
-        type: "number",
-        placeholder: "Miles driven per week",
+        name: "transportType",
+        label: "Transport Type",
+        type: "select",
+        placeholder: "Select transport type",
+        options: [
+          { value: "car", label: "Car" },
+          { value: "public", label: "Public Transport" },
+          { value: "bicycle", label: "Bicycle" },
+          { value: "walking", label: "Walking" },
+        ],
       },
       {
-        name: "publicTransport",
-        label: "Public Transport Usage (hours/week)",
+        name: "mileage",
+        label: "Daily Mileage",
         type: "number",
-        placeholder: "Hours per week",
+        placeholder: "Miles per day",
+      },
+    ],
+  },
+  {
+    title: "Lifestyle",
+    fields: [
+      {
+        name: "dietType",
+        label: "Food Consumption",
+        type: "select",
+        placeholder: "Select diet type",
+        options: [
+          { value: "vegan", label: "Vegan" },
+          { value: "vegetarian", label: "Vegetarian" },
+          { value: "omnivore", label: "Omnivore" },
+        ],
+      },
+      {
+        name: "shoppingHabits",
+        label: "Shopping Habits",
+        type: "select",
+        placeholder: "Select shopping frequency",
+        options: [
+          { value: "minimal", label: "Eco-friendly" },
+          { value: "moderate", label: "Moderate" },
+          { value: "frequent", label: "Frequent" },
+        ],
       },
     ],
   },
@@ -57,16 +105,20 @@ const formSteps: FormStep[] = [
     title: "Home Energy",
     fields: [
       {
-        name: "electricity",
+        name: "electricityUsage",
         label: "Monthly Electricity Usage (kWh)",
         type: "number",
-        placeholder: "kWh per month",
+        placeholder: "Enter kWh per month",
       },
       {
-        name: "gasUsage",
-        label: "Monthly Gas Usage (therms)",
-        type: "number",
-        placeholder: "Therms per month",
+        name: "solarPanels",
+        label: "Solar Panels",
+        type: "select",
+        placeholder: "Do you use solar panels?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ],
       },
     ],
   },
@@ -76,14 +128,19 @@ const CarbonForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
-  const [carbonFootprint, setCarbonFootprint] = useState<number | null>(null);
+  const [results, setResults] = useState<{
+    daily: number;
+    weekly: number;
+    monthly: number;
+    breakdown: { name: string; value: number }[];
+  } | null>(null);
   const { toast } = useToast();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const currentFields = formSteps[currentStep].fields;
     const isValid = currentFields.every((field) => formData[field.name]);
 
@@ -99,7 +156,20 @@ const CarbonForm = () => {
     if (currentStep < formSteps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      calculateCarbonFootprint();
+      // Here we would integrate with Gemini API
+      // For now using mock data
+      const mockResults = {
+        daily: 5.2,
+        weekly: 36.4,
+        monthly: 156,
+        breakdown: [
+          { name: "Transport", value: 2.5 },
+          { name: "Electricity", value: 1.7 },
+          { name: "Diet", value: 1.0 },
+        ],
+      };
+      setResults(mockResults);
+      setShowResults(true);
     }
   };
 
@@ -107,24 +177,49 @@ const CarbonForm = () => {
     setCurrentStep((prev) => Math.max(0, prev - 1));
   };
 
-  const calculateCarbonFootprint = async () => {
-    // This is where we'll integrate the Gemini API
-    // For now, using a placeholder calculation
-    const mockCalculation = Math.random() * 10 + 5;
-    setCarbonFootprint(mockCalculation);
-    setShowResults(true);
-  };
-
   const progress = ((currentStep + 1) / formSteps.length) * 100;
+
+  const renderField = (field: FormStep["fields"][0]) => {
+    if (field.type === "select" && field.options) {
+      return (
+        <Select
+          value={formData[field.name] || ""}
+          onValueChange={(value) => handleInputChange(field.name, value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={field.placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    return (
+      <Input
+        id={field.name}
+        type={field.type}
+        placeholder={field.placeholder}
+        value={formData[field.name] || ""}
+        onChange={(e) => handleInputChange(field.name, e.target.value)}
+        className="transition-all duration-200 focus:ring-eco-500"
+      />
+    );
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-eco-100 to-eco-200">
-      <Card className="w-full max-w-lg p-6 space-y-8 backdrop-blur-sm bg-white/80 animate-fade-in">
+      <Card className="w-full max-w-4xl p-6 space-y-8 backdrop-blur-sm bg-white/90 animate-fade-in">
         {!showResults ? (
           <>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Leaf className="h-5 w-5 text-eco-600" />
+                <Leaf className="h-6 w-6 text-eco-600" />
                 <h2 className="text-2xl font-semibold text-gray-800">
                   {formSteps[currentStep].title}
                 </h2>
@@ -132,18 +227,11 @@ const CarbonForm = () => {
               <Progress value={progress} className="h-2" />
             </div>
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {formSteps[currentStep].fields.map((field) => (
                 <div key={field.name} className="space-y-2">
                   <Label htmlFor={field.name}>{field.label}</Label>
-                  <Input
-                    id={field.name}
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    className="transition-all duration-200 focus:ring-eco-500"
-                  />
+                  {renderField(field)}
                 </div>
               ))}
             </div>
@@ -155,38 +243,60 @@ const CarbonForm = () => {
                 disabled={currentStep === 0}
                 className="w-32"
               >
-                <ChevronLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
               <Button onClick={handleNext} className="w-32 bg-eco-600 hover:bg-eco-700">
                 {currentStep === formSteps.length - 1 ? "Calculate" : "Next"}
-                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </>
         ) : (
-          <div className="space-y-6 animate-slide-up">
+          <div className="space-y-8 animate-slide-up">
             <div className="text-center space-y-2">
               <Leaf className="h-12 w-12 text-eco-600 mx-auto" />
               <h2 className="text-2xl font-semibold text-gray-800">
-                Your Carbon Footprint
+                Your Carbon Footprint Overview
               </h2>
               <p className="text-gray-600">
-                Based on your inputs, here's your estimated annual carbon footprint:
+                Based on your inputs, here's your carbon emission analysis
               </p>
             </div>
 
-            <div className="text-center">
-              <span className="text-4xl font-bold text-eco-600">
-                {carbonFootprint?.toFixed(2)}
-              </span>
-              <span className="text-xl text-gray-600 ml-2">tonnes CO2e/year</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Daily Emissions</Label>
+                <Progress value={(results?.daily || 0) * 10} className="h-4" />
+                <p className="text-right text-eco-600 font-semibold">
+                  {results?.daily.toFixed(1)} kg CO₂
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Weekly Emissions</Label>
+                <Progress value={(results?.weekly || 0) * 2} className="h-4" />
+                <p className="text-right text-eco-600 font-semibold">
+                  {results?.weekly.toFixed(1)} kg CO₂
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Monthly Emissions</Label>
+                <Progress value={(results?.monthly || 0) / 2} className="h-4" />
+                <p className="text-right text-eco-600 font-semibold">
+                  {results?.monthly.toFixed(1)} kg CO₂
+                </p>
+              </div>
             </div>
 
-            <Progress
-              value={(carbonFootprint || 0) * 5}
-              className="h-4 rounded-full"
-            />
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={results?.breakdown || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#66BB6A" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
             <Button
               onClick={() => {
