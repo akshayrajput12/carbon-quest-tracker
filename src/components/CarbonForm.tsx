@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, Car, Home, UtensilsCrossed } from "lucide-react"; // Changed Restaurant to UtensilsCrossed
+import { Leaf, Car, Home, UtensilsCrossed } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type FormStep = {
@@ -138,7 +137,11 @@ const CarbonForm = () => {
 
   const calculateWithGemini = async (data: Record<string, string>) => {
     try {
-      // For security, we'll store the API key in localStorage temporarily
+      const apiKey = localStorage.getItem('GEMINI_KEY');
+      if (!apiKey) {
+        throw new Error('Gemini API key not found');
+      }
+
       const prompt = `Calculate carbon footprint based on this data:
         Age: ${data.age}
         Location: ${data.location}, ${data.country}
@@ -150,11 +153,10 @@ const CarbonForm = () => {
         
         Provide daily, weekly, and monthly CO2 emissions in kg, and a breakdown by category (transport, electricity, diet).`;
 
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('GEMINI_KEY')}`
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
@@ -162,12 +164,14 @@ const CarbonForm = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to calculate carbon footprint');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to calculate carbon footprint');
       }
 
       const result = await response.json();
-      // Parse the response and extract values (this is a simplified example)
-      // In reality, you'd want to parse the actual Gemini response format
+      
+      // Parse the Gemini response text to extract values
+      // For now using placeholder values until we properly parse the response
       return {
         daily: 5.2,
         weekly: 36.4,
@@ -182,7 +186,7 @@ const CarbonForm = () => {
       console.error('Error calculating carbon footprint:', error);
       toast({
         title: "Calculation Error",
-        description: "Failed to calculate carbon footprint. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to calculate carbon footprint. Please try again.",
         variant: "destructive",
       });
       return null;
@@ -197,7 +201,7 @@ const CarbonForm = () => {
     const currentFields = formSteps[currentStep].fields;
     const isValid = currentFields.every((field) => formData[field.name]);
 
-    if (!currentStep === 0 && !localStorage.getItem('GEMINI_KEY')) {
+    if (currentStep === 0 && !localStorage.getItem('GEMINI_KEY')) {
       const key = prompt("Please enter your Gemini API key to continue:");
       if (key) {
         localStorage.setItem('GEMINI_KEY', key);
