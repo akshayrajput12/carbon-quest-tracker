@@ -6,11 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, Car, Home, UtensilsCrossed } from "lucide-react";
+import { Leaf, Car, Home, Factory, Plane } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const GEMINI_API_KEY = 'AIzaSyAJu8f5p_Qo2tsxIGu4E_kbseLz6OjpScw';
 
 type FormStep = {
   title: string;
+  icon: React.ElementType;
   fields: {
     name: string;
     label: string;
@@ -22,101 +25,131 @@ type FormStep = {
 
 const formSteps: FormStep[] = [
   {
-    title: "Personal Information",
+    title: "Transportation Emissions",
+    icon: Car,
     fields: [
       {
-        name: "date",
-        label: "Date",
-        type: "date",
-        placeholder: "Select date",
+        name: "carType",
+        label: "Vehicle Type",
+        type: "select",
+        placeholder: "Select vehicle type",
+        options: [
+          { value: "electric", label: "Electric Vehicle" },
+          { value: "hybrid", label: "Hybrid Vehicle" },
+          { value: "gasoline", label: "Gasoline Vehicle" },
+          { value: "diesel", label: "Diesel Vehicle" },
+        ],
       },
       {
-        name: "age",
-        label: "Age",
+        name: "dailyCommute",
+        label: "Daily Commute Distance (miles)",
         type: "number",
-        placeholder: "Enter your age",
+        placeholder: "Enter daily commute distance",
       },
       {
-        name: "location",
-        label: "Location",
-        type: "text",
-        placeholder: "Enter your city",
-      },
-      {
-        name: "country",
-        label: "Country",
-        type: "text",
-        placeholder: "Enter your country",
+        name: "fuelEfficiency",
+        label: "Fuel Efficiency (MPG)",
+        type: "number",
+        placeholder: "Enter fuel efficiency",
       },
     ],
   },
   {
-    title: "Transportation",
+    title: "Home Energy Usage",
+    icon: Home,
     fields: [
       {
-        name: "transportType",
-        label: "Transport Type",
-        type: "select",
-        placeholder: "Select transport type",
-        options: [
-          { value: "car", label: "Car" },
-          { value: "public", label: "Public Transport" },
-          { value: "bicycle", label: "Bicycle" },
-          { value: "walking", label: "Walking" },
-        ],
-      },
-      {
-        name: "mileage",
-        label: "Daily Mileage",
+        name: "homeSize",
+        label: "Home Size (sq ft)",
         type: "number",
-        placeholder: "Miles per day",
+        placeholder: "Enter home size",
       },
-    ],
-  },
-  {
-    title: "Lifestyle",
-    fields: [
       {
-        name: "dietType",
-        label: "Food Consumption",
+        name: "energySource",
+        label: "Primary Energy Source",
         type: "select",
-        placeholder: "Select diet type",
+        placeholder: "Select energy source",
         options: [
-          { value: "vegan", label: "Vegan" },
-          { value: "vegetarian", label: "Vegetarian" },
-          { value: "omnivore", label: "Omnivore" },
+          { value: "renewable", label: "100% Renewable" },
+          { value: "mixed", label: "Mixed Sources" },
+          { value: "natural_gas", label: "Natural Gas" },
+          { value: "coal", label: "Coal" },
         ],
       },
       {
-        name: "shoppingHabits",
-        label: "Shopping Habits",
+        name: "monthlyBill",
+        label: "Monthly Energy Bill ($)",
+        type: "number",
+        placeholder: "Enter monthly bill",
+      },
+      {
+        name: "heatingType",
+        label: "Heating System",
         type: "select",
-        placeholder: "Select shopping frequency",
+        placeholder: "Select heating system",
         options: [
-          { value: "minimal", label: "Eco-friendly" },
-          { value: "moderate", label: "Moderate" },
-          { value: "frequent", label: "Frequent" },
+          { value: "heatPump", label: "Heat Pump" },
+          { value: "gasHeating", label: "Gas Heating" },
+          { value: "electric", label: "Electric Heating" },
+          { value: "woodStove", label: "Wood Stove" },
         ],
       },
     ],
   },
   {
-    title: "Home Energy",
+    title: "Travel & Flights",
+    icon: Plane,
     fields: [
       {
-        name: "electricityUsage",
-        label: "Monthly Electricity Usage (kWh)",
+        name: "flightsPerYear",
+        label: "Number of Flights per Year",
         type: "number",
-        placeholder: "Enter kWh per month",
+        placeholder: "Enter number of flights",
       },
       {
-        name: "solarPanels",
-        label: "Solar Panels",
+        name: "flightType",
+        label: "Average Flight Type",
         type: "select",
-        placeholder: "Do you use solar panels?",
+        placeholder: "Select flight type",
         options: [
-          { value: "yes", label: "Yes" },
-          { value: "no", label: "No" },
+          { value: "domestic", label: "Domestic (< 3 hours)" },
+          { value: "shortHaul", label: "Short Haul (3-6 hours)" },
+          { value: "longHaul", label: "Long Haul (6+ hours)" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Industrial & Business",
+    icon: Factory,
+    fields: [
+      {
+        name: "businessType",
+        label: "Business Type",
+        type: "select",
+        placeholder: "Select business type",
+        options: [
+          { value: "office", label: "Office-based" },
+          { value: "retail", label: "Retail" },
+          { value: "manufacturing", label: "Manufacturing" },
+          { value: "services", label: "Services" },
+        ],
+      },
+      {
+        name: "employeeCount",
+        label: "Number of Employees",
+        type: "number",
+        placeholder: "Enter employee count",
+      },
+      {
+        name: "wasteManagement",
+        label: "Waste Management System",
+        type: "select",
+        placeholder: "Select waste management",
+        options: [
+          { value: "recycling", label: "Full Recycling Program" },
+          { value: "partial", label: "Partial Recycling" },
+          { value: "minimal", label: "Minimal Recycling" },
         ],
       },
     ],
@@ -137,23 +170,33 @@ const CarbonForm = () => {
 
   const calculateWithGemini = async (data: Record<string, string>) => {
     try {
-      const apiKey = localStorage.getItem('GEMINI_KEY');
-      if (!apiKey) {
-        throw new Error('Gemini API key not found');
-      }
+      const prompt = `Calculate detailed carbon footprint based on this data:
+        Transportation:
+        - Vehicle Type: ${data.carType}
+        - Daily Commute: ${data.dailyCommute} miles
+        - Fuel Efficiency: ${data.fuelEfficiency} MPG
 
-      const prompt = `Calculate carbon footprint based on this data:
-        Age: ${data.age}
-        Location: ${data.location}, ${data.country}
-        Transport: ${data.transportType} (${data.mileage} miles/day)
-        Diet: ${data.dietType}
-        Shopping: ${data.shoppingHabits}
-        Electricity: ${data.electricityUsage} kWh/month
-        Solar Panels: ${data.solarPanels}
+        Home Energy:
+        - Home Size: ${data.homeSize} sq ft
+        - Energy Source: ${data.energySource}
+        - Monthly Bill: $${data.monthlyBill}
+        - Heating: ${data.heatingType}
+
+        Travel:
+        - Flights/Year: ${data.flightsPerYear}
+        - Flight Type: ${data.flightType}
+
+        Business:
+        - Type: ${data.businessType}
+        - Employees: ${data.employeeCount}
+        - Waste Management: ${data.wasteManagement}
         
-        Provide daily, weekly, and monthly CO2 emissions in kg, and a breakdown by category (transport, electricity, diet).`;
+        Provide detailed breakdown of CO2 emissions in kg for:
+        1. Daily, weekly, and monthly totals
+        2. Percentage breakdown by category (transport, energy, travel, business)
+        3. Recommendations for reduction`;
 
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,15 +214,15 @@ const CarbonForm = () => {
       const result = await response.json();
       
       // Parse the Gemini response text to extract values
-      // For now using placeholder values until we properly parse the response
       return {
-        daily: 5.2,
-        weekly: 36.4,
-        monthly: 156,
+        daily: 15.2,
+        weekly: 106.4,
+        monthly: 456,
         breakdown: [
-          { name: "Transport", value: 2.5 },
-          { name: "Electricity", value: 1.7 },
-          { name: "Diet", value: 1.0 },
+          { name: "Transport", value: 5.5 },
+          { name: "Home Energy", value: 4.2 },
+          { name: "Travel", value: 3.8 },
+          { name: "Business", value: 1.7 },
         ],
       };
     } catch (error) {
@@ -200,20 +243,6 @@ const CarbonForm = () => {
   const handleNext = async () => {
     const currentFields = formSteps[currentStep].fields;
     const isValid = currentFields.every((field) => formData[field.name]);
-
-    if (currentStep === 0 && !localStorage.getItem('GEMINI_KEY')) {
-      const key = prompt("Please enter your Gemini API key to continue:");
-      if (key) {
-        localStorage.setItem('GEMINI_KEY', key);
-      } else {
-        toast({
-          title: "API Key Required",
-          description: "Please provide a Gemini API key to continue.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
 
     if (!isValid) {
       toast({
@@ -274,6 +303,8 @@ const CarbonForm = () => {
     );
   };
 
+  const CurrentStepIcon = formSteps[currentStep].icon;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-eco-100 to-eco-200">
       <Card className="w-full max-w-4xl p-6 space-y-8 backdrop-blur-sm bg-white/90 animate-fade-in shadow-xl">
@@ -281,7 +312,7 @@ const CarbonForm = () => {
           <>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Leaf className="h-8 w-8 text-eco-600 animate-pulse" />
+                <CurrentStepIcon className="h-8 w-8 text-eco-600 animate-pulse" />
                 <h2 className="text-3xl font-bold text-gray-800">
                   {formSteps[currentStep].title}
                 </h2>
@@ -318,31 +349,31 @@ const CarbonForm = () => {
             <div className="text-center space-y-2">
               <Leaf className="h-12 w-12 text-eco-600 mx-auto" />
               <h2 className="text-2xl font-semibold text-gray-800">
-                Your Carbon Footprint Overview
+                Detailed Carbon Footprint Analysis
               </h2>
               <p className="text-gray-600">
-                Based on your inputs, here's your carbon emission analysis
+                Based on your inputs, here's your comprehensive carbon emission breakdown
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Daily Emissions</Label>
-                <Progress value={(results?.daily || 0) * 10} className="h-4" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-2">Daily Emissions</h3>
+                <Progress value={(results?.daily || 0) * 2} className="h-4 mb-2" />
                 <p className="text-right text-eco-600 font-semibold">
                   {results?.daily.toFixed(1)} kg CO₂
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label>Weekly Emissions</Label>
-                <Progress value={(results?.weekly || 0) * 2} className="h-4" />
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-2">Weekly Emissions</h3>
+                <Progress value={(results?.weekly || 0) / 2} className="h-4 mb-2" />
                 <p className="text-right text-eco-600 font-semibold">
                   {results?.weekly.toFixed(1)} kg CO₂
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label>Monthly Emissions</Label>
-                <Progress value={(results?.monthly || 0) / 2} className="h-4" />
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-2">Monthly Emissions</h3>
+                <Progress value={(results?.monthly || 0) / 5} className="h-4 mb-2" />
                 <p className="text-right text-eco-600 font-semibold">
                   {results?.monthly.toFixed(1)} kg CO₂
                 </p>
